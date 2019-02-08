@@ -1,0 +1,11 @@
+com/tripco/t11/planner/TestSQLDatabase.class
+com/tripco/t11/planner/TestPlace.class
+com/tripco/t11/planner/TestDistance.class
+com/tripco/t11/planner/TestOpts.class
+com/tripco/t11/server/TestMicroServer.class
+com/tripco/t11/planner/TestOption.class
+com/tripco/t11/planner/TestPlan.class
+com/tripco/t11/server/TestConfig.class
+com/tripco/t11/planner/TestTrip.class
+com/tripco/t11/planner/TestSearch.class
+com/tripco/t11/server/TestGreeting.class

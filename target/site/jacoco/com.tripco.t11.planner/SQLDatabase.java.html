@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SQLDatabase.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">t11</a> &gt; <a href="index.source.html" class="el_package">com.tripco.t11.planner</a> &gt; <span class="el_source">SQLDatabase.java</span></div><h1>SQLDatabase.java</h1><pre class="source lang-java linenums">package com.tripco.t11.planner;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.Statement;
+import java.sql.SQLException;
+import java.sql.ResultSet;
+import java.util.ArrayList;
+import java.util.List;
+
+
+
+<span class="fc" id="L12">public class SQLDatabase {</span>
+
+    // db configuration information
+    private final static String myDriver = &quot;com.mysql.jdbc.Driver&quot;;
+    private final static String myUrl = &quot;jdbc:mysql://faure.cs.colostate.edu/cs314&quot;;
+    private final static String user=&quot;cs314-db&quot;;
+    private final static String pass=&quot;eiK5liet1uej&quot;;
+
+    // fill in SQL queries to count the number of records and to retrieve the data
+<span class="fc" id="L21">    private static String count = &quot;&quot;;</span>
+<span class="fc" id="L22">    private static String search = &quot;&quot;;</span>
+<span class="fc" id="L23">    public static int found = 0;</span>
+<span class="fc" id="L24">    public static ArrayList&lt;Place&gt; places = new ArrayList&lt;&gt;();</span>
+
+
+    private static void printJSON(ResultSet count, ResultSet query, String match) throws SQLException {
+<span class="nc" id="L28">        places.clear();</span>
+<span class="nc" id="L29">        found = 0;</span>
+        // determine the number of results that match the query
+<span class="nc" id="L31">        count.next();</span>
+<span class="nc" id="L32">        int results = count.getInt(1);</span>
+        // iterate through query results and print out the airport codes
+<span class="nc bnc" id="L34" title="All 2 branches missed.">        while (query.next()) {</span>
+<span class="nc" id="L35">            final Place place = new Place(query.getString(&quot;id&quot;),</span>
+<span class="nc" id="L36">                    query.getString(&quot;name&quot;),</span>
+<span class="nc" id="L37">                    query.getString(&quot;latitude&quot;),</span>
+<span class="nc" id="L38">                    query.getString(&quot;longitude&quot;));</span>
+<span class="nc" id="L39">            places.add(place);</span>
+<span class="nc" id="L40">            found++;</span>
+<span class="nc" id="L41">        }</span>
+<span class="nc" id="L42">        System.out.printf(&quot; ]\n}\n&quot;);</span>
+<span class="nc" id="L43">    }</span>
+
+    public static String setLimit(int limit){
+<span class="fc bfc" id="L46" title="All 2 branches covered.">        if(limit &lt; 0){</span>
+<span class="fc" id="L47">            limit = 1000;</span>
+        }
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        else if(limit == 0){</span>
+<span class="fc" id="L50">            return &quot;&quot;;</span>
+        }
+<span class="fc bfc" id="L52" title="All 2 branches covered.">        else if (limit &gt; 1000) {</span>
+<span class="fc" id="L53">             limit = 1000;</span>
+        }
+<span class="fc" id="L55">        String mylimit = &quot;LIMIT &quot; + limit;</span>
+<span class="fc" id="L56">        return mylimit;</span>
+    }
+
+    public static String setMatch(String match){
+<span class="fc" id="L60">        String myMatch = &quot;country.name LIKE '%&quot; + match + &quot;%' &quot; + &quot;OR world_airports.municipality LIKE'%&quot; + match + &quot;%' &quot; +</span>
+                        &quot;OR world_airports.name LIKE '%&quot; + match + &quot;%' &quot; +
+                        &quot;OR world_airports.id LIKE '%&quot; + match + &quot;%' &quot;;
+<span class="fc" id="L63">        return myMatch;</span>
+    }
+
+    public static String setFilter(List&lt;Filter&gt; filters){
+<span class="fc" id="L67">        String myFilters = &quot;&quot;;</span>
+<span class="fc bfc" id="L68" title="All 4 branches covered.">        if (filters == null || filters.size() == 0){</span>
+<span class="fc" id="L69">            return myFilters ;</span>
+        }
+<span class="fc" id="L71">        System.out.println(&quot;size: &quot; + filters.size());</span>
+       
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        for (int i = 0; i &lt; filters.size(); i++) {</span>
+<span class="fc bfc" id="L74" title="All 2 branches covered.">            if(filters.get(i).values.size()!=0){</span>
+<span class="fc" id="L75">                Filter filter = filters.get(i);</span>
+<span class="fc" id="L76">                String filterString = &quot;&quot;;</span>
+
+<span class="fc" id="L78">                String confName = &quot;&quot;;</span>
+<span class="fc bfc" id="L79" title="All 2 branches covered.">                if(filter.name.equals(&quot;continent&quot;)){</span>
+<span class="fc" id="L80">                    confName = &quot;continents.name&quot;;</span>
+                }
+<span class="fc bfc" id="L82" title="All 2 branches covered.">                else if(filter.name.equals(&quot;type&quot;)){</span>
+<span class="fc" id="L83">                    confName = &quot;world_airports.type&quot;;</span>
+                }
+                else{
+<span class="fc" id="L86">                    confName = filter.name;</span>
+                }
+                
+<span class="fc" id="L89">                filterString += confName + &quot; IN (&quot;;</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">                for (int j = 0; j &lt; filter.values.size(); j++) {</span>
+<span class="fc" id="L91">                    filterString += &quot;\&quot;&quot; + filter.values.get(j) + &quot;\&quot;, &quot;;</span>
+                }
+<span class="fc" id="L93">                filterString = filterString.substring(0, filterString.length() - 2) + &quot;)&quot;;</span>
+<span class="fc" id="L94">                myFilters += filterString + &quot; AND &quot;;</span>
+            }
+        }
+<span class="fc bfc" id="L97" title="All 2 branches covered.">        if (myFilters.length() &gt; 4) {</span>
+<span class="fc" id="L98">            myFilters = myFilters.substring(0, myFilters.length() - 4); </span>
+            //whitescreen glitch here, myFilters.length() == 0, hopefully patched with the if 
+        }
+<span class="fc" id="L101">        return myFilters;</span>
+    }
+
+    public static String setQueryString(String myMatch, String myFilter){
+<span class="fc" id="L105">        String myQuery = &quot;&quot;;</span>
+
+<span class="fc bfc" id="L107" title="All 4 branches covered.">        if (myMatch.equals(&quot;&quot;) &amp;&amp; !myFilter.equals(&quot;&quot;)){</span>
+<span class="fc" id="L108">            myQuery = &quot;WHERE &quot; + myFilter;</span>
+<span class="fc bfc" id="L109" title="All 4 branches covered.">        } else if (myFilter.equals(&quot;&quot;) &amp;&amp; !myMatch.equals(&quot;&quot;)){</span>
+<span class="fc" id="L110">            myQuery = &quot;WHERE &quot; + myMatch + &quot; &quot;;</span>
+<span class="pc bpc" id="L111" title="1 of 4 branches missed.">        } else if (myFilter.equals(&quot;&quot;) &amp;&amp; myMatch.equals(&quot;&quot;)){</span>
+<span class="fc" id="L112">            myQuery = &quot; &quot;;</span>
+        } else {
+<span class="fc" id="L114">            myQuery = &quot;WHERE ( &quot; + myMatch + &quot; ) AND &quot; + myFilter;</span>
+        }
+
+<span class="fc" id="L117">        return myQuery;</span>
+    }
+
+
+
+    public static void connectSQL(String match, int limit, List&lt;Filter&gt; filters){
+<span class="nc" id="L123">        String myLimit = setLimit(limit);</span>
+<span class="nc" id="L124">        String myMatch = setMatch(match);</span>
+<span class="nc" id="L125">        String myFilter = setFilter(filters);</span>
+<span class="nc" id="L126">        String myQuery = setQueryString(myMatch, myFilter);</span>
+
+        
+<span class="nc" id="L129">        count = &quot;SELECT count(*) FROM world_airports&quot;;</span>
+<span class="nc" id="L130">        search = &quot;SELECT world_airports.id, world_airports.name, world_airports.municipality, world_airports.latitude, world_airports.longitude, country.name, continents.name, world_airports.type, region.name &quot; + </span>
+                &quot;FROM continents &quot; + 
+                &quot;INNER JOIN country ON continents.id = country.continent &quot; +
+                &quot;INNER JOIN region ON country.id = region.iso_country &quot; +
+                &quot;INNER JOIN world_airports ON region.id = world_airports.iso_region &quot;
+                + myQuery +
+                &quot; ORDER BY continents.name, country.name, region.name, world_airports.name ASC &quot;
+                + myLimit + &quot;;&quot;;
+
+<span class="nc" id="L139">        System.out.println(search);</span>
+                
+        try {
+<span class="nc" id="L142">            Class.forName(myDriver);</span>
+            // connect to the database and query
+<span class="nc" id="L144">            try (Connection conn = DriverManager.getConnection(myUrl, user, pass);</span>
+<span class="nc" id="L145">                 Statement stCount = conn.createStatement();</span>
+<span class="nc" id="L146">                 Statement stQuery = conn.createStatement();</span>
+<span class="nc" id="L147">                 ResultSet rsCount = stCount.executeQuery(count);</span>
+<span class="nc" id="L148">                 ResultSet rsQuery = stQuery.executeQuery(search)</span>
+            ) {
+<span class="nc" id="L150">                printJSON(rsCount, rsQuery, match);</span>
+            }
+<span class="nc" id="L152">        } catch (Exception e) {</span>
+<span class="nc" id="L153">            System.err.println(&quot;Exception: &quot; + e.getMessage());</span>
+<span class="nc" id="L154">        }</span>
+<span class="nc" id="L155">        search = &quot;SELECT world_airports.id, world_airports.name, world_airports.municipality, world_airports.latitude, world_airports.longitude, country.name, continents.name, world_airports.type, region.name &quot; + </span>
+                &quot;FROM continents &quot; + 
+                &quot;INNER JOIN country ON continents.id = country.continent &quot; +
+                &quot;INNER JOIN region ON country.id = region.iso_country &quot; +
+                &quot;INNER JOIN world_airports ON region.id = world_airports.iso_region &quot;
+                + myQuery +
+                &quot; ORDER BY continents.name, country.name, region.name, world_airports.name ASC;&quot;;
+<span class="nc" id="L162">        found = 0;</span>
+        try {
+<span class="nc" id="L164">            Class.forName(myDriver);</span>
+            // connect to the database and query
+<span class="nc" id="L166">            try (Connection conn = DriverManager.getConnection(myUrl, user, pass);</span>
+<span class="nc" id="L167">                 Statement stCount = conn.createStatement();</span>
+<span class="nc" id="L168">                 Statement stQuery = conn.createStatement();</span>
+<span class="nc" id="L169">                 ResultSet rsCount = stCount.executeQuery(count);</span>
+<span class="nc" id="L170">                 ResultSet rsQuery = stQuery.executeQuery(search)</span>
+            ) {
+<span class="nc bnc" id="L172" title="All 2 branches missed.">                while(rsQuery.next()){</span>
+<span class="nc" id="L173">                    found++;</span>
+                }
+            }
+<span class="nc" id="L176">        } catch (Exception e) {</span>
+<span class="nc" id="L177">            System.err.println(&quot;Exception: &quot; + e.getMessage());</span>
+<span class="nc" id="L178">        }</span>
+<span class="nc" id="L179">    }</span>
+
+
+}
+
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
