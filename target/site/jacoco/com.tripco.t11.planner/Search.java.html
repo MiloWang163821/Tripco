@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Search.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">t11</a> &gt; <a href="index.source.html" class="el_package">com.tripco.t11.planner</a> &gt; <span class="el_source">Search.java</span></div><h1>Search.java</h1><pre class="source lang-java linenums">package com.tripco.t11.planner;
+import java.util.ArrayList;
+import java.util.List;
+
+
+public class Search {
+
+<span class="fc" id="L8">    public int version = 5;</span>
+<span class="fc" id="L9">    public String type = &quot;search&quot;;</span>
+<span class="fc" id="L10">    public String match = &quot;&quot;;</span>
+    public List&lt;Filter&gt; filters;
+<span class="fc" id="L12">    public Integer limit = 0;</span>
+<span class="fc" id="L13">    public Integer found = 0;</span>
+    public ArrayList&lt;Place&gt; places;
+
+    /**
+     * This is a default constructor.
+     */
+<span class="fc" id="L19">    public Search(){</span>
+<span class="fc" id="L20">        this.match = null;</span>
+<span class="fc" id="L21">    }</span>
+
+    /**
+     * This is a constructor.
+     * @param match String compare match with places' names in the database.
+     */
+<span class="fc" id="L27">    public Search(String match){</span>
+<span class="fc" id="L28">        this.match = match;</span>
+<span class="fc" id="L29">    }</span>
+
+    /**
+     * The top level method that does searching.
+     */
+    public void match(){
+<span class="nc" id="L35">        SQLDatabase sql = new SQLDatabase();</span>
+<span class="nc" id="L36">        sql.connectSQL(this.match, this.limit, this.filters);</span>
+<span class="nc" id="L37">        this.places = (ArrayList&lt;Place&gt;) sql.places.clone();</span>
+<span class="nc" id="L38">        this.found = sql.found;</span>
+<span class="nc" id="L39">    }</span>
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

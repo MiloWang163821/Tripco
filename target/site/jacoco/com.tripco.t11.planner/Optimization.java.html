@@ -1,0 +1,299 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Optimization.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">t11</a> &gt; <a href="index.source.html" class="el_package">com.tripco.t11.planner</a> &gt; <span class="el_source">Optimization.java</span></div><h1>Optimization.java</h1><pre class="source lang-java linenums">package com.tripco.t11.planner;
+
+public class Optimization extends Thread {
+    private int [][] Dtable;
+    private int start;
+    private String optLevel;
+    public int[] results;
+    public int totalDist;
+
+
+
+<span class="fc" id="L12">    public Optimization (int [][] table, int start,String optlevel){</span>
+<span class="fc" id="L13">        Dtable = table;</span>
+<span class="fc" id="L14">        this.start = start;</span>
+<span class="fc" id="L15">        optLevel = optlevel;</span>
+
+<span class="fc" id="L17">        results = new int[Dtable.length];</span>
+<span class="fc" id="L18">    }</span>
+
+
+    public void run(){
+<span class="fc" id="L22">        pickOpt();</span>
+
+<span class="fc" id="L24">    }</span>
+    //picks the correct find dist method
+    private void pickOpt(){
+
+<span class="fc" id="L28">        fillArray(results);</span>
+<span class="fc" id="L29">        results[0] = start;</span>
+<span class="fc" id="L30">        results[start] = 0;</span>
+
+
+<span class="fc bfc" id="L33" title="All 2 branches covered.">        if(&quot;short&quot;.equals(optLevel)){</span>
+<span class="fc" id="L34">            NN();</span>
+        }
+<span class="fc bfc" id="L36" title="All 2 branches covered.">        else if(&quot;shorter&quot;.equals(optLevel)){</span>
+<span class="fc" id="L37">            setTwoOpt();</span>
+        }
+<span class="fc bfc" id="L39" title="All 2 branches covered.">        else if(&quot;shortest&quot;.equals(optLevel)){</span>
+            //System.out.println(&quot;starts 3Opt&quot;);
+<span class="fc" id="L41">            setThreeOpt();</span>
+        }
+
+<span class="fc" id="L44">        totalDist = findLength(results,Dtable);</span>
+        //System.out.println(&quot;thread #&quot;+start+&quot; is done&quot;);
+<span class="fc" id="L46">    }</span>
+
+
+    //NN section
+
+    private void NN(){
+<span class="fc" id="L52">        int nearest = 1;//set the first nearest</span>
+<span class="fc" id="L53">        int curbest = Integer.MAX_VALUE;//set the best as the first option</span>
+<span class="fc" id="L54">        int totaldist = 0;</span>
+<span class="fc" id="L55">        int hold = 0;</span>
+        //0 in P is already &quot;correct&quot; find the thing that needs to go in the next place and repeat place
+<span class="fc bfc" id="L57" title="All 2 branches covered.">        for(int i = 1; i &lt; results.length-1;i++){//for each location</span>
+
+<span class="fc bfc" id="L59" title="All 2 branches covered.">            for(int k = i; k &lt; results.length;k++){//find the closest place</span>
+                //find the nearest
+<span class="fc" id="L61">                hold =  Dtable[results[i-1]][results[k]];</span>
+<span class="fc bfc" id="L62" title="All 2 branches covered.">                if(curbest &gt; hold){</span>
+<span class="fc" id="L63">                    curbest = hold;</span>
+<span class="fc" id="L64">                    nearest = k;//nearest to i-1</span>
+                }
+            }
+            //swap the best option into the slot
+<span class="fc" id="L68">            hold = results[nearest];//hold the new nearest</span>
+<span class="fc" id="L69">            results[nearest] = results[i];//put the i + 1 in nearest</span>
+<span class="fc" id="L70">            results[i] = hold;//put nearest in i + 1</span>
+<span class="fc" id="L71">            totaldist += curbest; //add the new dist to the total</span>
+<span class="fc" id="L72">            curbest = Dtable[results[i]][results[i+1]];//sloppy reset of value</span>
+<span class="fc" id="L73">            nearest = i + 1;</span>
+        }
+        //add the distance of the first to last place to complete the circle
+<span class="fc" id="L76">        totaldist += curbest;//(length-1 to length-2)</span>
+<span class="fc" id="L77">        totaldist += Dtable[results[0]][results[results.length-1]];</span>
+        //System.out.println(totaldist);
+<span class="fc" id="L79">        totalDist = totaldist;</span>
+<span class="fc" id="L80">    }</span>
+
+
+    //two-Opt section
+
+    private void setTwoOpt(){
+
+<span class="fc" id="L87">        NN();//first run a NN on the trip to get a mostly optimized step</span>
+
+
+<span class="fc" id="L90">        boolean improvement = true;</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">        while (improvement) {</span>
+<span class="fc" id="L92">            improvement = false;</span>
+<span class="fc bfc" id="L93" title="All 2 branches covered.">            for (int i = 1; i &lt; results.length - 1; i++) {//i probably starts at 0 if this is broken try that</span>
+<span class="fc bfc" id="L94" title="All 2 branches covered.">                for (int k = i + 1; k &lt; results.length; k++){</span>
+<span class="fc" id="L95">                    int change = findChange(results, i, k,Dtable);</span>
+<span class="fc bfc" id="L96" title="All 2 branches covered.">                    if (change &lt; 0) {</span>
+<span class="fc" id="L97">                        segmentReverse(results, i , k);</span>
+<span class="fc" id="L98">                        improvement = true;</span>
+                    }
+                }
+            }
+        }
+<span class="fc" id="L103">    }</span>
+
+
+    //three-Opt section
+    private void setThreeOpt(){
+<span class="fc" id="L108">        int delta = 0;</span>
+<span class="fc" id="L109">        NN();//first run a NN on the trip to get a mostly optimized step</span>
+        //System.out.println(&quot;outside while loop&quot;);
+<span class="fc" id="L111">        int curDist = findLength(results, Dtable);</span>
+
+<span class="fc" id="L113">        boolean improvement = true;</span>
+<span class="fc" id="L114">        boolean test = false;</span>
+<span class="fc bfc" id="L115" title="All 2 branches covered.">        while (improvement) {</span>
+            //System.out.println(&quot;inside while loop&quot;);
+<span class="fc" id="L117">            improvement = false;</span>
+            //test = false;
+            //int count = 0;
+<span class="fc" id="L120">            delta = findLength(results, Dtable);</span>
+<span class="fc bfc" id="L121" title="All 2 branches covered.">            for (int i = 0; i &lt; results.length - 2; i++) {</span>
+                //System.out.println(&quot;inside i loop&quot;);
+<span class="fc bfc" id="L123" title="All 2 branches covered.">                for (int j = i + 1; j &lt; results.length - 1; j++) {//indexing is likely wrong</span>
+                    //System.out.println(&quot;inside j loop&quot;);
+<span class="fc bfc" id="L125" title="All 2 branches covered.">                    for (int k = j + 1; k &lt; results.length; k++) {</span>
+                        //System.out.println(&quot;inside k loop&quot;);
+<span class="fc bfc" id="L127" title="All 2 branches covered.">                        if(reverse_segment_if_better(results, i, j, k, Dtable)){</span>
+                            //test = true;
+                            //count++; //these variables were used for testing
+                            //improvement = true;
+                        }
+
+                    }
+                }
+            }
+<span class="fc" id="L136">            delta = delta - findLength(results, Dtable);</span>
+<span class="fc bfc" id="L137" title="All 2 branches covered.">            if(delta &gt; 0){</span>
+<span class="fc" id="L138">                improvement = true;</span>
+            }
+            //else if(test){
+                //System.out.println(&quot;test is true, but delta &lt;= 0&quot;); //executes occasionally (not on every case)
+                //System.out.println(&quot;Count: &quot;+count);
+        /*
+        reverse_segment_if_better() did something, but not something to improve delta
+        reverse_segment_if_better executed multiple times, and didn't improve on the total length of trip
+        I'm guessing because it did something, then undid it because it was faster from each of their
+          perspectives. How could that happen?
+         */
+            //}
+        }
+<span class="fc" id="L151">    }</span>
+
+
+
+    //helper methods
+
+
+    public void segmentReverse(int[] loc, int i, int k){
+<span class="fc bfc" id="L159" title="All 2 branches covered.">        while (i &lt; k){</span>
+<span class="fc" id="L160">            int temp = loc[k];</span>
+<span class="fc" id="L161">            loc[k] = loc[i];</span>
+<span class="fc" id="L162">            loc[i] = temp;</span>
+<span class="fc" id="L163">            k--;i++;</span>
+<span class="fc" id="L164">        }</span>
+<span class="fc" id="L165">    }</span>
+
+
+    private int findChange(int[] loc,int i, int k,int[][] Dtable){
+<span class="fc" id="L169">        int size = loc.length;//k+1 is out of bounds so i just point it back at the start</span>
+<span class="fc" id="L170">        int orig = Dtable[loc[i]][loc[i-1]] + Dtable[loc[k]][loc[(k+1)%size]];</span>
+<span class="fc" id="L171">        int mod = Dtable[loc[i]][loc[(k+1)%size]] + Dtable[loc[k]][loc[i-1]];</span>
+<span class="fc" id="L172">        return mod - orig;//return the difference between</span>
+    }
+
+
+    public void fillArray(int[] array){
+<span class="fc bfc" id="L177" title="All 2 branches covered.">        for(int i = 0;i &lt; array.length;i++){</span>
+<span class="fc" id="L178">            array[i] = i;</span>
+        }
+<span class="fc" id="L180">    }</span>
+
+
+    private int findLength(int[] loc,int[][] Dtable){
+<span class="fc" id="L184">        int size = loc.length;</span>
+<span class="fc" id="L185">        int length = 0;</span>
+<span class="fc bfc" id="L186" title="All 2 branches covered.">        for(int i = 0; i &lt; loc.length;i++){</span>
+<span class="fc" id="L187">            length += Dtable[loc[i]][loc[(i+1)%size]];</span>
+        }
+        //length += Dtable[loc[0]][loc[loc.length-1]];
+<span class="fc" id="L190">        return length;</span>
+    }
+
+
+    public boolean reverse_segment_if_better(int[] loc,int i,int j,int k,int [][] Dtable){
+
+<span class="fc" id="L196">        int A = loc[i];</span>
+<span class="fc" id="L197">        int B = loc[i+1];</span>
+<span class="fc" id="L198">        int C = loc[j];</span>
+<span class="fc" id="L199">        int D = loc[j+1];</span>
+<span class="fc" id="L200">        int E = loc[k];</span>
+<span class="fc" id="L201">        int F = loc[(k+1)%loc.length];</span>
+
+<span class="fc" id="L203">        int[] c = new int[8];</span>
+
+<span class="fc" id="L205">        c[0] = Dtable[A][B] + Dtable[C][D] + Dtable[E][F];//original</span>
+
+<span class="fc" id="L207">        c[1] = Dtable[A][C] + Dtable[B][D] + Dtable[E][F];//2opt</span>
+<span class="fc" id="L208">        c[2] = Dtable[A][B] + Dtable[C][E] + Dtable[D][F];</span>
+<span class="fc" id="L209">        c[3] = Dtable[A][E] + Dtable[D][C] + Dtable[B][F];</span>
+
+<span class="fc" id="L211">        c[4] = Dtable[A][C] + Dtable[B][E] + Dtable[D][F]; //3opt</span>
+<span class="fc" id="L212">        c[5] = Dtable[A][D] + Dtable[E][C] + Dtable[B][F];</span>
+<span class="fc" id="L213">        c[6] = Dtable[A][E] + Dtable[D][B] + Dtable[C][F];</span>
+<span class="fc" id="L214">        c[7] = Dtable[A][D] + Dtable[E][B] + Dtable[C][F];</span>
+
+<span class="fc" id="L216">        int holder = c[0];</span>
+<span class="fc" id="L217">        int index = 0;</span>
+<span class="fc bfc" id="L218" title="All 2 branches covered.">        for(int iter = 1; iter &lt; c.length ; iter ++){</span>
+<span class="fc bfc" id="L219" title="All 2 branches covered.">            if(c[iter] &lt;= holder) {</span>
+<span class="fc" id="L220">                holder = c[iter];</span>
+<span class="fc" id="L221">                index = iter;</span>
+            }
+        }
+
+
+<span class="fc bfc" id="L226" title="All 2 branches covered.">        if(index &gt; 3){//three Opt</span>
+<span class="fc bfc" id="L227" title="All 2 branches covered.">            if(index == 4){//two two opt swaps i+1 to j and j+1 to k</span>
+<span class="fc" id="L228">                segmentReverse(loc,i+1,j);</span>
+<span class="fc" id="L229">                segmentReverse(loc,j+1,k);</span>
+<span class="fc" id="L230">                return true;</span>
+            }
+<span class="fc bfc" id="L232" title="All 2 branches covered.">            if(index == 5){//segment reverse on J+1 to k and then swaping on i j k</span>
+<span class="fc" id="L233">                segmentReverse(loc,j+1,k);</span>
+<span class="fc" id="L234">                swapSection(loc,i,j,k);//come back later posible bug</span>
+<span class="fc" id="L235">                return true;</span>
+            }
+<span class="fc bfc" id="L237" title="All 2 branches covered.">            if(index == 6){//segment reverse on i+1 to j and then swaping on i j k</span>
+<span class="fc" id="L238">                segmentReverse(loc,i+1,j);</span>
+<span class="fc" id="L239">                swapSection(loc,i, j, k);</span>
+<span class="fc" id="L240">                return true;</span>
+            }
+<span class="pc bpc" id="L242" title="1 of 2 branches missed.">            if(index == 7){</span>
+<span class="fc" id="L243">                swapSection(loc,i,j,k);</span>
+<span class="fc" id="L244">                return true;</span>
+            }
+
+        }
+<span class="fc bfc" id="L248" title="All 2 branches covered.">        else if(index &gt; 0){//two Opt</span>
+<span class="fc bfc" id="L249" title="All 2 branches covered.">            if(index == 1){</span>
+<span class="fc" id="L250">                segmentReverse(loc,i+1,j);</span>
+<span class="fc" id="L251">                return true;</span>
+            }
+<span class="fc bfc" id="L253" title="All 2 branches covered.">            if(index == 2){</span>
+<span class="fc" id="L254">                segmentReverse(loc,j+1,k);</span>
+<span class="fc" id="L255">                return true;</span>
+            }
+<span class="pc bpc" id="L257" title="1 of 2 branches missed.">            if(index == 3){</span>
+<span class="fc" id="L258">                segmentReverse(loc,i+1,k);</span>
+<span class="fc" id="L259">                return true;</span>
+            }
+        }
+<span class="fc" id="L262">        return false;</span>
+    }
+
+
+    public void swapSection(int[] loc,int i, int j, int k){
+<span class="fc" id="L267">        int[] holder = new int[k-i];</span>
+        //System.out.println(&quot;in swap&quot;);
+<span class="fc" id="L269">        int begining = i+1;</span>
+<span class="fc" id="L270">        int end = k;//these are inclusive</span>
+
+<span class="fc" id="L272">        int sec1 = j - i;</span>
+<span class="fc" id="L273">        int sec2 = k - j;</span>
+
+        //add in the i -  j values
+<span class="fc bfc" id="L276" title="All 2 branches covered.">        for(int x = 0 ; x &lt; sec1; x++){</span>
+            //add the values from i to j in loc to the
+            // k-(j-i) to k locations in
+<span class="fc" id="L279">            holder[x + end - j] = loc[x + begining];</span>
+
+        }
+        //add in the j - k values
+<span class="fc bfc" id="L283" title="All 2 branches covered.">        for(int x = 0; x &lt; sec2; x++){</span>
+            //add the values from j to k in loc to the
+            //0 to sec2 vals in holder
+<span class="fc" id="L286">            holder[x] = loc[j + x + 1];//the Plus one makes it not include j</span>
+        }
+        //now fill the original back in
+<span class="fc bfc" id="L289" title="All 2 branches covered.">        for(int x = 0; x &lt; holder.length; x++){</span>
+<span class="fc" id="L290">            loc[begining + x] = holder[x];</span>
+        }
+<span class="fc" id="L292">    }</span>
+
+
+
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

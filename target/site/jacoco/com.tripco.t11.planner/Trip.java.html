@@ -1,0 +1,434 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Trip.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">t11</a> &gt; <a href="index.source.html" class="el_package">com.tripco.t11.planner</a> &gt; <span class="el_source">Trip.java</span></div><h1>Trip.java</h1><pre class="source lang-java linenums">package com.tripco.t11.planner;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import com.tripco.t11.server.HTTP;
+import com.tripco.t11.planner.Optimization;
+import java.io.*;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.InputStream;
+import java.lang.Class;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Scanner;
+
+import spark.Request;
+
+
+/**
+ * The Trip class supports TFFI so it can easily be converted to/from Json by Gson.
+ *
+ */
+<span class="fc" id="L24">public class Trip {</span>
+  // The variables in this class should reflect TFFI.
+  public Integer version;
+  public String type;
+  public String title;
+  public Option options;
+  public ArrayList&lt;Place&gt; places;
+  public ArrayList&lt;Integer&gt; distances;
+  public String map;
+
+
+
+
+  /** The top level method that does planning.
+   * At this point it just adds the map and distances for the places in order.
+   * It might need to reorder the places in the future.
+   */
+  public void plan() {
+<span class="fc" id="L42">    long start = System.currentTimeMillis();</span>
+<span class="fc" id="L43">    optimize_concurrent();</span>
+<span class="fc" id="L44">    System.out.println(&quot;it took :&quot;+(System.currentTimeMillis() - start)+&quot;ms&quot;);</span>
+<span class="fc" id="L45">    this.map = mapping();</span>
+<span class="fc" id="L46">    this.distances = legDistances();</span>
+<span class="fc" id="L47">    System.out.println(crossSum(this.distances));</span>
+<span class="fc" id="L48">  }</span>
+
+  private String mapping()
+  {
+<span class="fc bfc" id="L52" title="All 6 branches covered.">    if ( this.options == null || this.options.map == null || this.options.map.equals(&quot;svg&quot;))</span>
+    {
+<span class="fc" id="L54">       return svg();</span>
+    }
+<span class="fc bfc" id="L56" title="All 2 branches covered.">    else if (this.options.map.equals(&quot;kml&quot;))</span>
+    {
+<span class="fc" id="L58">       return kml();</span>
+    }
+<span class="fc" id="L60">    return svg();</span>
+  }
+
+  /**
+  * Returns a kml that contains the legs of the trip
+  * combined with google's api, this will map the trip.
+  */
+  private String kml(){
+<span class="fc" id="L68">    String t = &quot;&lt;?xml version=\&quot;1.0\&quot; encoding=\&quot;UTF-8\&quot;?&gt;\n&lt;kml xmlns=\&quot;http://www.opengis.net/kml/2.2\&quot;&gt;\n&quot;;</span>
+<span class="fc" id="L69">    t += &quot;  &lt;Document&gt;\n&quot;;</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">    for (int k = 0; k &lt; this.places.size(); k++)</span>
+    {
+<span class="fc" id="L72">      Place cur = this.places.get(k);</span>
+<span class="fc" id="L73">      String e = &quot;  &lt;Placemark&gt;\n    &lt;name&gt;&quot;+cur.name.replace(&quot;&amp;&quot;, &quot;and&quot;)+&quot;&lt;/name&gt;\n&quot;;</span>
+<span class="fc" id="L74">      e += &quot;    &lt;Point&gt;\n      &lt;coordinates&gt;&quot;+cur.longitude+&quot;,&quot;+cur.latitude+&quot;&lt;/coordinates&gt;\n    &lt;/Point&gt;\n&quot;;</span>
+<span class="fc" id="L75">      e += &quot;  &lt;/Placemark&gt;\n&quot;;</span>
+
+<span class="fc" id="L77">      t += e;</span>
+    }
+
+<span class="fc bfc" id="L80" title="All 2 branches covered.">    if (this.places.size() &gt; 0)</span>
+    {
+
+<span class="fc" id="L83">       t += &quot;  &lt;Placemark&gt;\n    &lt;LineString&gt;\n      &lt;coordinates&gt;\n&quot;;</span>
+<span class="fc bfc" id="L84" title="All 2 branches covered.">       for (int j = 0; j &lt; this.places.size(); j++)</span>
+       {
+<span class="fc" id="L86">         Place cur = this.places.get(j);</span>
+<span class="fc" id="L87">         t += &quot;        &quot;+cur.longitude+&quot;,&quot;+cur.latitude+&quot;\n&quot;;</span>
+       }
+<span class="fc" id="L89">       t +=   &quot;        &quot;+this.places.get(0).longitude+&quot;,&quot;+this.places.get(0).latitude+&quot;\n&quot;;</span>
+<span class="fc" id="L90">       t += &quot;      &lt;/coordinates&gt;\n    &lt;/LineString&gt;\n &quot;;</span>
+<span class="fc" id="L91">       t += &quot;    &lt;Style&gt;\n      &lt;LineStyle&gt;\n        &lt;color&gt;#ffff0000&lt;/color&gt;\n      &lt;/LineStyle&gt;\n    &lt;/Style&gt;\n&quot;;</span>
+<span class="fc" id="L92">       t += &quot;  &lt;/Placemark&gt;\n&quot;;</span>
+    }
+<span class="fc" id="L94">    t += &quot;  &lt;/Document&gt;\n&lt;/kml&gt;&quot;;</span>
+    
+<span class="fc" id="L96">    return t;</span>
+  }
+
+  /**
+   * Returns an SVG containing the background and the legs of the trip.
+   * @return a string that should map the world as well as the trip.
+   */
+  private String svg() {
+<span class="fc" id="L104">    this.map = getFreshMap();</span>
+
+    //not enough places to draw lines, just return the image
+<span class="fc bfc" id="L107" title="All 4 branches covered.">    if(places == null || places.size() &lt;= 1) </span>
+    {  //maybe later, return a dot on the single location?
+<span class="fc" id="L109">        return map;</span>
+    }
+
+<span class="fc" id="L112">    String lines = &quot;&quot;;</span>
+<span class="fc bfc" id="L113" title="All 2 branches covered.">    for(int k = 0; k&lt; places.size(); k++)</span>
+    {
+<span class="fc" id="L115">         lines += drawLines(k, (k+1) % places.size());</span>
+    }
+
+    //System.out.println(lines);
+
+<span class="fc" id="L120">    map = new StringBuffer(map).insert(map.length() - 6, lines).toString(); //It might be faster to have the client have this map natively,</span>
+    //and just pass the changes instead of passing the entire map each and every time.
+
+<span class="fc" id="L123">    return map;</span>
+  }
+
+  private String drawLines(int index, int next)
+  {
+<span class="fc" id="L128">    String line = &quot;&quot;;</span>
+<span class="fc" id="L129">    double p1long = Double.parseDouble(places.get(index).longitude);</span>
+<span class="fc" id="L130">    double p2long = Double.parseDouble(places.get(next).longitude);</span>
+    
+<span class="fc" id="L132">    int y1 = transformlati(places.get(index).latitude);</span>
+<span class="fc" id="L133">    int x1 = transformlong(places.get(index).longitude);</span>
+
+<span class="fc" id="L135">    int y2 = transformlati(places.get(next).latitude);</span>
+<span class="fc" id="L136">    int x2 = transformlong(places.get(next).longitude);</span>
+
+<span class="fc" id="L138">    double dis = Math.abs(p1long - p2long);</span>
+<span class="fc bfc" id="L139" title="All 2 branches covered.">    if (dis &gt; 180.0)</span>
+    {
+<span class="fc bfc" id="L141" title="All 2 branches covered.">      if (p2long &lt; 0)</span>
+      {
+<span class="fc" id="L143">        line += &quot;  &lt;line x1=\&quot;&quot;+x1+&quot;\&quot; y1=\&quot;&quot;+y1+&quot;\&quot; x2=\&quot;&quot;+(x2+1024)+&quot;\&quot; y2=\&quot;&quot;+y2+&quot;\&quot; style=\&quot;stroke:rgb(0,0,255);stroke-width:2\&quot; /&gt;\n&quot;;</span>
+<span class="fc" id="L144">        line += &quot;  &lt;line x1=\&quot;&quot;+(x1-1024)+&quot;\&quot; y1=\&quot;&quot;+y1+&quot;\&quot; x2=\&quot;&quot;+x2+&quot;\&quot; y2=\&quot;&quot;+y2+&quot;\&quot; style=\&quot;stroke:rgb(0,0,255);stroke-width:2\&quot; /&gt;\n&quot;;</span>
+      }
+      else
+      {
+        //System.out.println(&quot;hi&quot;);
+<span class="fc" id="L149">        line += &quot;  &lt;line x1=\&quot;&quot;+x1+&quot;\&quot; y1=\&quot;&quot;+y1+&quot;\&quot; x2=\&quot;&quot;+(x2-1024)+&quot;\&quot; y2=\&quot;&quot;+y2+&quot;\&quot; style=\&quot;stroke:rgb(0,0,255);stroke-width:2\&quot; /&gt;\n&quot;;</span>
+<span class="fc" id="L150">        line += &quot;  &lt;line x1=\&quot;&quot;+(x1+1024)+&quot;\&quot; y1=\&quot;&quot;+y1+&quot;\&quot; x2=\&quot;&quot;+x2+&quot;\&quot; y2=\&quot;&quot;+y2+&quot;\&quot; style=\&quot;stroke:rgb(0,0,255);stroke-width:2\&quot; /&gt;\n&quot;;</span>
+      }
+    }
+    else
+    {
+<span class="fc" id="L155">      line = &quot;  &lt;line x1=\&quot;&quot;+x1+&quot;\&quot; y1=\&quot;&quot;+y1+&quot;\&quot; x2=\&quot;&quot;+x2+&quot;\&quot; y2=\&quot;&quot;+y2+&quot;\&quot; style=\&quot;stroke:rgb(0,0,255);stroke-width:2\&quot; /&gt;\n&quot;;</span>
+    }
+
+<span class="fc" id="L158">    return line;</span>
+  }
+
+  private static int transformlong(String longitude)
+  {
+    //if (longitude.matches(&quot;\\d{2}[°]\\d{2}[\&quot;]\\d+[.]\\d+[']&quot;)
+<span class="fc" id="L164">    double l = -1.0;</span>
+    try
+    {
+<span class="fc" id="L167">        l = Double.parseDouble(longitude);</span>
+    }
+<span class="nc" id="L169">    catch(NumberFormatException e)</span>
+    {
+        //for now, do nothing, but longitude is in the form dd°dd&quot;dd.dddd', l = degrees + (minutes/60) + (seconds/3600)
+<span class="nc" id="L172">        return -1;</span>
+<span class="fc" id="L173">    }</span>
+
+<span class="fc" id="L175">    l = (l*(2.8456)) + 512;</span>
+    //this line transforms the longitude to svg values for Colorado
+    //This assumes a perfectly flat, rectangular Colorado, therefore there is some error. Although it is very fast.
+
+<span class="fc" id="L179">    return (int)l;</span>
+  }
+
+  private static int transformlati(String latitude)
+  {
+<span class="fc" id="L184">    double l = -1.0;</span>
+    try
+    {
+<span class="fc" id="L187">        l = Double.parseDouble(latitude);</span>
+    }
+<span class="nc" id="L189">    catch(NumberFormatException e)</span>
+    {
+        //for now, do nothing, but longitude is in the form dd°dd&quot;dd.dddd', l = degrees + (minutes/60) + (seconds/3600)
+<span class="nc" id="L192">        return -1;</span>
+<span class="fc" id="L193">    }</span>
+
+<span class="fc" id="L195">     l = (l*(-2.825962)) + 256; //this line transforms the longitude to svg values for Colorado</span>
+    //This assumes a perfectly flat, rectangular Colorado, therefore there is some error. Although it is very fast.
+
+<span class="fc" id="L198">    return (int)l;</span>
+  }
+
+  /*This function returns the pixel size of the svg
+  * Right now it is hardcoded until a better solution is found
+  */
+  private static int svghorizontalsize()
+  {
+<span class="nc" id="L206">    return 1067; //this is a hardcoded value pulled from CObackground.svg</span>
+  }
+
+  /*This function returns the pixel size of the svg
+  * Right now it is hardcoded until a better solution is found
+  */
+  private static int svgverticalsize()
+  {
+<span class="nc" id="L214">    return 783; //this is a hardcoded value pulled from CObackground.svg</span>
+  }
+
+  private String getFreshMap()
+  {
+    BufferedReader read;
+    try
+    {
+<span class="fc" id="L222">      InputStreamReader temp = new InputStreamReader(getClass().getResourceAsStream(&quot;/World_map_with_nations.svg&quot;));</span>
+<span class="fc" id="L223">      read = new BufferedReader(temp);</span>
+    }
+<span class="nc" id="L225">    catch (Exception e)</span>
+    { 
+<span class="nc" id="L227">      System.err.println(&quot;Couldn't find the background map&quot;);</span>
+<span class="nc" id="L228">      return &quot;        &quot;; </span>
+<span class="fc" id="L229">    }</span>
+
+<span class="fc" id="L231">    String line = &quot;&quot;;</span>
+<span class="fc" id="L232">    String total = &quot;&quot;;</span>
+    
+    try 
+    {
+<span class="fc bfc" id="L236" title="All 2 branches covered.">       while (( line = read.readLine() )!= null)</span>
+       {
+<span class="fc" id="L238">         total += line;</span>
+       }
+    }
+<span class="nc" id="L241">    catch (Exception e)</span>
+    {
+<span class="nc" id="L243">       System.err.println(&quot;readLine failed &quot;);</span>
+       //do nothing...
+<span class="fc" id="L245">    }</span>
+ 
+    //System.out.println(&quot;total: &quot; +total);
+
+<span class="fc" id="L249">    return total;</span>
+    
+  }
+
+  /**
+  * This method returns the radius of the earth in the given units.
+  * units comes from this.options.units
+  * @return radius of earth as a double
+  */
+  public double getEarth_radius(){
+<span class="fc bfc" id="L259" title="All 2 branches covered.">    if(options == null){</span>
+<span class="fc" id="L260">      return 3959; } //this is probably a test case, just default to miles</span>
+<span class="fc bfc" id="L261" title="All 2 branches covered.">    else if(&quot;user defined&quot;.equals(options.units)) {</span>
+<span class="fc" id="L262">      return options.unitRadius; }</span>
+<span class="fc bfc" id="L263" title="All 2 branches covered.">    else if(&quot;kilometers&quot;.equals(options.units)) {</span>
+<span class="fc" id="L264">      return 6371; }</span>
+<span class="fc bfc" id="L265" title="All 2 branches covered.">    else if(&quot;nautical miles&quot;.equals(options.units)) {</span>
+<span class="fc" id="L266">      return 3440; }</span>
+    //default to miles
+<span class="fc" id="L268">    return 3959;</span>
+  }
+
+  /**
+  * this method takes two places and returns the vincenty great circle distance between them
+  * @param origin, the first place
+  * @param destination, the second place
+  *
+  * @return the distance between them as an int
+  */
+  public int calDist(Place origin, Place destination)
+  {
+<span class="fc" id="L280">    double lamda1 = Math.toRadians(Double.valueOf(origin.longitude)); //lambda1</span>
+<span class="fc" id="L281">    double theta1 = Math.toRadians(Double.valueOf(origin.latitude)); //theta1</span>
+<span class="fc" id="L282">    double lamda2 = Math.toRadians(Double.valueOf(destination.longitude));</span>
+<span class="fc" id="L283">    double theta2 = Math.toRadians(Double.valueOf(destination.latitude));</span>
+
+<span class="fc" id="L285">    double deltalamda = Math.abs(lamda1 - lamda2);</span>
+
+<span class="fc" id="L287">    double a = Math.pow(Math.cos(theta2)*Math.sin(deltalamda), 2);</span>
+<span class="fc" id="L288">    double b = Math.pow( (Math.cos(theta1)*Math.sin(theta2)) - (Math.sin(theta1)*Math.cos(theta2)*Math.cos(deltalamda)), 2);</span>
+<span class="fc" id="L289">    double c = (Math.sin(theta1)*Math.sin(theta2)) + (Math.cos(theta1)*Math.cos(theta2)*Math.cos(deltalamda));</span>
+
+<span class="fc" id="L291">    double top = Math.sqrt(a + b);</span>
+<span class="fc" id="L292">    double bottom = c;</span>
+
+<span class="fc" id="L294">    double finished = Math.atan2(top, bottom);</span>
+    //System.out.println(&quot;Data:&quot; + finished + &quot; &quot; + a + &quot; &quot; + b + &quot; &quot; + c);
+<span class="fc" id="L296">    int distance = (int)Math.round(finished * getEarth_radius());</span>
+<span class="fc" id="L297">    return distance;</span>
+  }
+
+  /**
+   * Returns the distances between consecutive places,
+   * including the return to the starting point to make a round trip.
+   * @return the arraylist of distances between member variable places
+   *     where the nth term is the distance between the n and n+1 th term in places
+   */
+  private ArrayList&lt;Integer&gt; legDistances() {
+<span class="fc" id="L307">    ArrayList&lt;Integer&gt; dist = new ArrayList&lt;Integer&gt;();</span>
+<span class="fc bfc" id="L308" title="All 4 branches covered.">    if (places == null || places.size() == 0) //some base cases, dont try anything when size is 1 or 0</span>
+    {
+<span class="fc" id="L310">      return new ArrayList&lt;Integer&gt;();</span>
+    }
+<span class="fc bfc" id="L312" title="All 2 branches covered.">    else if (places.size() == 1)</span>
+    {
+<span class="fc" id="L314">      dist.add(0);</span>
+<span class="fc" id="L315">      return dist;</span>
+    }
+
+
+<span class="fc bfc" id="L319" title="All 2 branches covered.">    for(int i = 0; i &lt; places.size()-1; i++){</span>
+<span class="fc" id="L320">      int d = calDist(places.get(i), places.get(i+1));</span>
+<span class="fc" id="L321">      dist.add(d);</span>
+    }
+<span class="fc" id="L323">    int tmp = calDist(places.get(0), places.get(places.size()-1));</span>
+<span class="fc" id="L324">    dist.add(tmp);</span>
+    
+<span class="fc" id="L326">    return dist;</span>
+  }
+
+
+  /**
+  * this function calls the correct optimization function to optimize the trip
+  *//*
+  public void optimize(){
+    if( places == null || places.size() == 0){
+      return;
+    }
+    if(options == null || options.optimization == null){
+      return;
+    }
+    int[][] distT = distTable();
+
+    if(&quot;short&quot;.equals(options.optimization)){
+      nearestN(distT);
+    }
+    else if(&quot;shorter&quot;.equals(options.optimization)){
+      twoOpt(distT);
+    }
+    else if(&quot;shortest&quot;.equals(options.optimization)){
+        //System.out.println(&quot;starts 3Opt&quot;);
+      threeOpt(distT);
+    } 
+
+  } */
+
+  public void optimize_concurrent(){
+<span class="fc bfc" id="L356" title="All 4 branches covered.">    if( places == null || places.size() == 0){</span>
+<span class="fc" id="L357">      return;</span>
+    }
+<span class="fc bfc" id="L359" title="All 4 branches covered.">    if(options == null || options.optimization == null){</span>
+<span class="fc" id="L360">      return;</span>
+    }
+<span class="fc" id="L362">    int[][] distT = distTable();</span>
+
+    //make the list of optimizations
+<span class="fc" id="L365">    ArrayList&lt;Optimization&gt; allOpts = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L366" title="All 2 branches covered.">    for(int i = 0; i &lt; places.size();i++){</span>
+<span class="fc" id="L367">      Optimization O = new Optimization(distT,i,options.optimization);</span>
+<span class="fc" id="L368">      allOpts.add(O);</span>
+    }
+
+    //start the threads
+<span class="fc bfc" id="L372" title="All 2 branches covered.">    for(int i = 0; i &lt; places.size();i++){</span>
+<span class="fc" id="L373">      allOpts.get(i).start();</span>
+    }
+
+    //wait for the threads to finish
+<span class="fc bfc" id="L377" title="All 2 branches covered.">    for(int i = 0; i &lt; allOpts.size();i++){//should ensure that all the optimizations have been done</span>
+      try {
+<span class="fc" id="L379">        allOpts.get(i).join();</span>
+<span class="nc" id="L380">      }catch (Exception ex){</span>
+<span class="nc" id="L381">        System.err.println(&quot;the try catch in optimize got called on join&quot;);</span>
+<span class="nc" id="L382">        allOpts.remove(i);</span>
+<span class="fc" id="L383">      }</span>
+    }
+    //System.out.println(&quot;master is continuing&quot;);
+
+    //find the best optimization
+<span class="fc" id="L388">    int holder = allOpts.get(0).totalDist;</span>
+<span class="fc" id="L389">    int best = 0;</span>
+<span class="fc bfc" id="L390" title="All 2 branches covered.">    for(int i = 1; i &lt; places.size();i++){</span>
+<span class="fc bfc" id="L391" title="All 2 branches covered.">      if(allOpts.get(i).totalDist &lt; holder){</span>
+<span class="fc" id="L392">        best = i;</span>
+<span class="fc" id="L393">        holder = allOpts.get(i).totalDist;</span>
+      }
+    }
+
+    //use the best optimization to update the places list
+<span class="fc" id="L398">    ArrayList&lt;Place&gt; newPlaces = new ArrayList();</span>
+<span class="fc bfc" id="L399" title="All 2 branches covered.">    for(int i = 0; i &lt; places.size() ;i++){</span>
+<span class="fc" id="L400">      newPlaces.add(places.get(allOpts.get(best).results[i]));</span>
+    }
+<span class="fc" id="L402">    places = newPlaces;</span>
+
+
+<span class="fc" id="L405">  }</span>
+
+  //build a distTable
+  private int[][] distTable(){
+<span class="fc" id="L409">    int[][] hold = new int[places.size()][places.size()];</span>
+    int temp;
+<span class="fc bfc" id="L411" title="All 2 branches covered.">    for(int i = 0; i &lt; places.size();i++){</span>
+<span class="fc bfc" id="L412" title="All 2 branches covered.">      for(int k = i; k &lt; places.size();k++) {</span>
+<span class="fc" id="L413">        temp = calDist(places.get(i), places.get(k));</span>
+<span class="fc" id="L414">        hold[i][k] = temp;</span>
+<span class="fc" id="L415">        hold[k][i] = temp; //can cut work in half but am too lazy</span>
+      }
+    }
+
+<span class="fc" id="L419">    return hold;</span>
+  }
+
+  private long crossSum(ArrayList&lt;Integer&gt; l)
+  {
+<span class="fc" id="L424">      long d = 0;</span>
+<span class="fc bfc" id="L425" title="All 2 branches covered.">      for (int k = 0; k &lt; l.size(); k++)</span>
+      {
+<span class="fc" id="L427">          d += l.get(k);</span>
+      }
+<span class="fc" id="L429">      return d;</span>
+  } 
+
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>

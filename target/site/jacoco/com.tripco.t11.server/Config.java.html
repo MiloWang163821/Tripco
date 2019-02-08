@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Config.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">t11</a> &gt; <a href="index.source.html" class="el_package">com.tripco.t11.server</a> &gt; <span class="el_source">Config.java</span></div><h1>Config.java</h1><pre class="source lang-java linenums">package com.tripco.t11.server;
+
+import com.google.gson.Gson;
+import com.tripco.t11.planner.Opts;
+import com.tripco.t11.planner.Filter;
+import java.util.Arrays;
+import java.util.List;
+
+public class Config {
+
+<span class="fc" id="L11">  private short version = 4;</span>
+<span class="fc" id="L12">  private String type = &quot;config&quot;;</span>
+
+<span class="fc" id="L14">  private List&lt;String&gt; units = Arrays.asList(&quot;miles&quot;,&quot;kilometers&quot;,&quot;nautical miles&quot;,&quot;user defined&quot;);</span>
+<span class="fc" id="L15">  private List&lt;Opts&gt; optimization = Arrays.asList(new Opts(&quot;none&quot;,&quot;The trip is not optimized.&quot;),new Opts(&quot;short&quot;,&quot;Nearest neighbor.&quot;),new Opts(&quot;shorter&quot;,&quot;two Opt Optimization&quot;),new Opts(&quot;shortest&quot;,&quot;three Opt Optimization&quot;));</span>
+<span class="fc" id="L16">  private List&lt;String&gt; maps = Arrays.asList(&quot;svg&quot;,&quot;kml&quot;);</span>
+<span class="fc" id="L17">  private List&lt;String&gt; attributes = Arrays.asList(&quot;id&quot;,&quot;name&quot;,&quot;latitude&quot;,&quot;longitude&quot;,&quot;region&quot;,&quot;municipality&quot;,&quot;continent&quot;,&quot;country&quot;);</span>
+
+  private List&lt;Filter&gt; filters;
+
+
+<span class="fc" id="L22">  public Config(){</span>
+<span class="fc" id="L23">        Filter filter1 = new Filter(&quot;world_airports.type&quot;, Arrays.asList(&quot;balloonport&quot;, &quot;heliport&quot;, &quot;small_airport&quot;, &quot;medium_airport&quot;, &quot;large_airport&quot;, &quot;seaplane_base&quot;));</span>
+<span class="fc" id="L24">        Filter filter2 = new Filter(&quot;continents.name&quot;, Arrays.asList(&quot;North America&quot;, &quot;South America&quot;, &quot;Africa&quot;, &quot;Asia&quot;, &quot;Oceania&quot;, &quot;Europe&quot;, &quot;Antarctica&quot;));</span>
+<span class="fc" id="L25">        this.filters = Arrays.asList(filter1, filter2);</span>
+<span class="fc" id="L26">  }</span>
+
+
+  static String getConfig(){
+<span class="fc" id="L30">    Config conf = new Config();</span>
+<span class="fc" id="L31">    Gson gson = new Gson();</span>
+
+<span class="fc" id="L33">    return gson.toJson(conf);</span>
+  }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.2.201808211720</span></div></body></html>
